@@ -12,6 +12,7 @@ export interface CubeFrameProps {
     errorMode: boolean;
     errorMessage?: string;
     branding?: Branding;
+    showFixedLogo?: boolean;
 }
 
 export interface CubeFrameState {
@@ -19,18 +20,35 @@ export interface CubeFrameState {
 }
 
 export class CubeFrame extends React.Component<CubeFrameProps, CubeFrameState> {
+    
+    private static readonly DEFAULT_STATIC_LOGO = "/images/gitpod-logo-no-text.svg";
+
     private canvas: HTMLCanvasElement | null;
     private bootanimation?: Bootanimation;
 
     constructor(props: CubeFrameProps) {
         super(props);
         this.state = {};
+    }
 
-        if (props.branding && props.branding.startupLogo) {
+    protected updateFixedLogoState() {
+        if (this.props.branding && this.props.branding.startupLogo) {
             this.state = {
                 fixedLogo: this.props.branding!.startupLogo
             };
+            return;
         }
+        if (!!this.props.showFixedLogo || !this.bootanimation) {
+            this.state = {
+                fixedLogo: CubeFrame.DEFAULT_STATIC_LOGO
+            }
+            return;
+        }
+        this.state = { fixedLogo: undefined };
+    }
+
+    protected showFixedLogo() {
+        return !!this.props.showFixedLogo || (this.props.branding && this.props.branding.startupLogo);
     }
 
     componentWillUnmount() {
@@ -41,18 +59,15 @@ export class CubeFrame extends React.Component<CubeFrameProps, CubeFrameState> {
     }
 
     componentDidMount() {
-        if (this.canvas != null && !this.state.fixedLogo) {
+        if (this.canvas != null && !this.showFixedLogo()) {
             try {
                 this.bootanimation = Bootanimation.create(this.canvas);
                 this.bootanimation.start();
             } catch (err) {
                 console.warn("WebGL is not supported");
-                let fixedLogo = "/images/gitpod-logo-no-text.svg";
-                if (this.props.branding && this.props.branding.startupLogo) {
-                    fixedLogo = this.props.branding.startupLogo;
-                }
-                this.setState({fixedLogo});
+                this.bootanimation = undefined;
             }
+            this.updateFixedLogoState();
         }
     }
 
@@ -60,10 +75,11 @@ export class CubeFrame extends React.Component<CubeFrameProps, CubeFrameState> {
         if (this.bootanimation) {
             this.bootanimation.setInErrorMode(this.props.errorMode);
         }
+        this.updateFixedLogoState();
 
         return (
             <div className='start'>
-                <canvas ref={(e) => this.canvas = e}></canvas>
+                <canvas ref={(e) => this.canvas = e} style={{ display: !!this.state.fixedLogo ? 'none' : 'block' }}></canvas>
                 { !!this.state.fixedLogo &&
                     <div className="gitpod-boot-logo-div">
                         <img className="gitpod-boot-logo" src={this.state.fixedLogo} />
