@@ -77,8 +77,23 @@ spec:
           path: /proc/mounts
           type: File
       {{- end }}
+      {{- if $comp.userNamespaces.shiftfsModuleLoader.enabled }}
+      - name: node-modules
+        hostPath: 
+          path: /lib/modules
+          type: Directory
+      {{- end }}
 {{- if $comp.volumes }}
 {{ toYaml $comp.volumes | indent 6 }}
+{{- end }}
+{{- if $comp.userNamespaces.shiftfsModuleLoader.enabled }}
+      initContainers:
+      - name: shiftfs-module-loader
+        volumeMounts:
+        - mountPath: /lib/modules
+          name: node-modules
+          readOnly: true
+        image: {{ template "gitpod.comp.imageFull" (dict "root" . "gp" $.Values "comp" $comp.userNamespaces.shiftfsModuleLoader) }}
 {{- end }}
       containers:
       - name: ws-sync
